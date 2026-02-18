@@ -7,3 +7,5 @@ cogs/__pycache__/adminutils.cpython-313.pyc
 cogs/__pycache__/fun.cpython-313.pyc
 cogs/__pycache__/fun.cpython-313.pyc
 *.pyc
+/__pycache__
+*.pyc
