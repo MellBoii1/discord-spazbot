@@ -1,0 +1,189 @@
+"""
+Copyright © Krypton 2019-Present - https://github.com/kkrypt0nn (https://krypton.ninja)
+Description:
+🐍 A simple template to start to code your own and personalized Discord bot in Python
+
+Version: 6.4.0
+"""
+
+import platform
+import random
+
+import json
+import aiohttp
+import discord
+import requests
+import sys
+import os
+import pyttsx3
+from discord import app_commands
+from discord.ext import commands
+from discord.ext.commands import Context
+
+GREETINGS = [
+    "greetings!",
+    "here i am!",
+    "howdy.",
+    "name's spazbot!",
+    "i'm up and runnin'!",
+]
+USER_DATA_FILE = 'userdata.json'
+
+class HelpView(discord.ui.View):
+    def __init__(self, *, bot: commands.Bot, author: discord.Member, pages: list[discord.Embed]):
+        super().__init__(timeout=120)
+
+        self.bot = bot
+        self.author = author
+        self.pages = pages
+        self.index = 0
+
+        self._update_buttons()
+
+    def _update_buttons(self):
+        self.prev_button.disabled = self.index <= 0
+        self.next_button.disabled = self.index >= len(self.pages) - 1
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if interaction.user != self.author:
+            await interaction.response.send_message(
+                "this ain't your help menu.",
+                ephemeral=True
+            )
+            return False
+        return True
+
+    @discord.ui.button(emoji="<a:arrow_left:1463262102545236170>", style=discord.ButtonStyle.grey)
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index -= 1
+        self._update_buttons()
+        await interaction.response.edit_message(
+            embed=self.pages[self.index],
+            view=self
+        )
+
+    @discord.ui.button(emoji="<a:arrow_right:1463262135806328965>", style=discord.ButtonStyle.grey)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index += 1
+        self._update_buttons()
+        await interaction.response.edit_message(
+            embed=self.pages[self.index],
+            view=self
+        )
+
+    async def on_timeout(self):
+        for item in self.children:
+            item.disabled = True
+
+class General(commands.Cog, name="General"):
+    def __init__(self, bot) -> None:
+        self.bot = bot
+        self.tts_engine = pyttsx3.init()
+
+    @commands.hybrid_command(
+        name="help",
+        description="shows all commands that you can use"
+    )
+    @commands.cooldown(1, 20, commands.BucketType.user)
+    async def help(self, context: Context):
+
+        pages: list[discord.Embed] = []
+
+        for cog_name in self.bot.cogs:
+            # owner-only cog check
+            if cog_name.lower() == "owner":
+                if not await self.bot.is_owner(context.author):
+                    continue
+
+            cog = self.bot.get_cog(cog_name)
+            if not cog:
+                continue
+
+            cmds = cog.get_commands()
+            if not cmds:
+                continue
+
+            lines = []
+            for command in cmds:
+                desc = command.description.partition("\n")[0]
+                lines.append(f"{command.name} — {desc}")
+
+            embed = discord.Embed(
+                title=f"{cog_name} Commands",
+                description="here's what you can use (try not to screw it up).",
+                color=0xBEBEFE
+            )
+
+            embed.add_field(
+                name="",
+                value=f"```{chr(10).join(lines)}```",
+                inline=False
+            )
+
+            embed.set_footer(text="(use the buttons to switch pages)")
+
+            pages.append(embed)
+
+        if not pages:
+            await context.send("no commands found.")
+            return
+
+        view = HelpView(
+            bot=self.bot,
+            author=context.author,
+            pages=pages
+        )
+
+        await context.send(
+            embed=pages[0],
+            view=view
+        )
+
+    @commands.hybrid_command(
+        name="say", 
+        description=(
+            "make me say something!"
+            " REMINDER: use double quotes for messages with spaces"
+        )   
+    )
+    @commands.cooldown(1, 1, commands.BucketType.user)
+    async def say(self, ctx, message: str):
+        if '@' in message:
+            await ctx.send("pings aren't allowed in say!")
+            return
+        await ctx.send(message)
+        # FIXME: discord has a feature for tts.
+        # use that maybe??
+        self.tts_engine.say(message)
+        self.tts_engine.runAndWait()
+        
+    @commands.hybrid_command(
+        name="ping",
+        description="check if the bot is alive and well!",
+    )
+    async def ping(self, context: Context) -> None:
+        lat = round(self.bot.latency * 1000)
+        await context.send(f'pong! latency is {lat}ms')
+
+    # FIXME: no point in using this if ping alr exists
+    @commands.hybrid_command(
+        name="hello",
+        description=(
+            "reply with hello! used for testing "
+            "if the bot is working or not"
+        )
+    )
+    async def hello(self, context: Context):
+        await context.send(random.choice(GREETINGS))
+
+    # placeholder for possible future ai features
+    # ...maybe
+    @commands.hybrid_command(
+        name="ai",
+        description='?'
+    )
+    async def ai(self, context: Context):
+        await context.send('Nothing here yet...')
+
+async def setup(bot) -> None:
+    await bot.add_cog(General(bot))
