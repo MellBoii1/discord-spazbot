@@ -108,6 +108,7 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
     
     @commands.hybrid_command(name="change_id",
     description="changes the channel where the bot will send/edit leaderboard status.")
+    @app_commands.describe(new_id='ID of the channel where the bot will send status')
     async def change_id(self, context: Context, new_id: int):
         if self.get_value(context.author.id, "admin") != True:
             await context.send("you aren't trusted to run that!")
@@ -122,6 +123,10 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
         name="add_stat", 
         description="give a player a stat"
     )
+    @app_commands.describe(
+        stat='The label of the stat you want to add to', 
+        val='The amount you want to add'
+    )
     async def add_stat(self, ctx, user: discord.User, stat: str, val: int):
         if self.get_value(ctx.author.id, "admin") != True:
             await context.send("you aren't trusted to run that!")
@@ -133,6 +138,7 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
         name="get_stat", 
         description="get a player's stat"
     )
+    @app_commands.describe(stat='The label of the stat you want to check')
     async def get_stat(self, ctx, user: discord.User, stat: str):
         if self.get_value(ctx.author.id, "admin") != True:
             await context.send("you aren't trusted to run that!")
@@ -143,6 +149,10 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
     @commands.hybrid_command(
         name="set_stat", 
         description="set a player's stat"
+    )
+    @app_commands.describe(
+        stat='The label of the stat you want to set', 
+        val='The amount you want to set'
     )
     async def set_stat(self, ctx, user: discord.User, stat: str, val: str):
         if self.get_value(ctx.author.id, "admin") != True:

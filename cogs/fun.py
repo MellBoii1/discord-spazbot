@@ -157,25 +157,28 @@ SHOP_ITEMS = {
         "price": 4000,
         "currency": "tickets",
         "description": "Unlock the title 'ULTRAGAMBLER' for your profile.",
-        "effect": lambda self, user_id: self.set_value(user_id, "title", "ULTRAGAMBLER")
+        "extradesc": "This will multiply the amount of money you get from gambling by 2, and jackpot chance by 15%",
+        "effect": lambda self, user_id, amount: self.set_value(user_id, "title", "ULTRAGAMBLER")
     },
     "title: Addicted to Gambling": {
         "price": 8000,
         "currency": "tickets",
         "description": "Unlock the title 'Addicted to Gambling'",
-        "effect": lambda self, user_id: self.set_value(user_id, "title", "Addicted to Gambling")
+        "extradesc": "This will multiply the amount of money you get from gambling by 3, and jackpot chance by 20%",
+        "effect": lambda self, user_id, amount: self.set_value(user_id, "title", "Addicted to Gambling")
     },
     "title: Total SpazBot Enthusiast": {
         "price": 12000,
         "currency": "tickets",
         "description": "Unlock the title 'Total SpazBot Enthusiast' for your profile.",
-        "effect": lambda self, user_id: self.set_value(user_id, "title", "Total SpazBot Enthusiast")
+        "extradesc": "This does not unlock any extra abilities.",
+        "effect": lambda self, user_id, amount: self.set_value(user_id, "title", "Total SpazBot Enthusiast")
     },
     "rob_multiplier": {
         "price": 60,
         "currency": "tokens",
         "description": "Increases chance of successful robs by 15% for 20 minutes.",
-        "effect": lambda self, user_id: self.add_rob_multi(user_id)
+        "effect": lambda self, user_id, amount: self.add_rob_multi(user_id)
     }
 }
 
@@ -402,22 +405,40 @@ class Fun(commands.Cog, name="Fun"):
         items_list = "\n".join(f"**{name}**: {data['price']} {CURRENCIES[data['currency']]['emoji']} {data['currency']} - {data['description']}" for name, data in SHOP_ITEMS.items())
         embed = discord.Embed(title="Shop", description=items_list or "No items available.", color=discord.Color.blue())
         await ctx.send(embed=embed)
+    
+    def get_item_names():
+        item_list = []
+
+        for name in SHOP_ITEMS:  # only keys now
+            choice = app_commands.Choice(name=name, value=name)
+            item_list.append(choice)
+
+        return item_list
 
     @shop.command(name="about", description="Get details about a shop item")
-    async def shop_about(self, ctx, item: str):
-        if item not in SHOP_ITEMS:
-            await ctx.send(f"item '{item}' not found in the shop.")
+    @app_commands.choices(item=get_item_names())
+    @app_commands.describe(item='The item you want to learn about')
+    async def shop_about(self, ctx, item: app_commands.Choice[str]):
+        item_name = item.value
+        if item_name not in SHOP_ITEMS:
+            await ctx.send(f"item '{item_name}' not found in the shop.")
             return
-        data = SHOP_ITEMS[item]
+        data = SHOP_ITEMS[item_name]
+        extra_desc = data.get('extradesc', '')
         embed = discord.Embed(
-            title=f"About {item}", 
-            description=data['description'], 
+            title=f"About {item_name}",
+            description=f"{data['description']}\n{extra_desc}",
             color=discord.Color.green()
         )
-        embed.add_field(name="Price", value=f"{data['price']} {CURRENCIES[data['currency']]['emoji']} {data['currency']}")
+        embed.add_field(
+            name="Price",
+            value=f"{data['price']} {CURRENCIES[data['currency']]['emoji']} {data['currency']}"
+        )
         await ctx.send(embed=embed)
 
     @shop.command(name="buy", description="Buy an item from the shop")
+    @app_commands.choices(item=get_item_names())
+    @app_commands.describe(item='The item you want to buy', amount='The amount you want to buy')
     async def shop_buy(self, ctx, item: str, amount: int = 1):
         item = item.lower()
         matched_item = next(

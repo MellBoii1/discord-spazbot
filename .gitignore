@@ -2,3 +2,8 @@
 userdata.json
 status_message.json
 discord.log
+cogs/__pycache__/fun.cpython-313.pyc
+cogs/__pycache__/adminutils.cpython-313.pyc
+cogs/__pycache__/fun.cpython-313.pyc
+cogs/__pycache__/fun.cpython-313.pyc
+*.pyc
