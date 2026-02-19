@@ -69,7 +69,7 @@ class Disquda(commands.Cog, name="CrossSquda"):
     )
     @commands.cooldown(1, 15, commands.BucketType.user)
     async def leaderboard(self, context: Context):
-        url = "https://bombsquda-leaderboard.tailc76b25.ts.net/get/all"
+        url = "https://bombsquda.tailc76b25.ts.net/get/all"
 
         try:
             timeout = aiohttp.ClientTimeout(total=5)  # don't hang forever
