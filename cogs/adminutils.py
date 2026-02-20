@@ -31,7 +31,16 @@ RESTART_TEXT = [
     '"Hey, come back here! You big-a monkey!"',
     '"Where you going, ya big drip!?"',
     'Y\'know, every restart decreases my lifespan by 5392 years. This better be worth it.',
-    '<@888982610393595904>!!!!! I NEED YOU <@888982610393595904>!!!',
+    '<@1461469020753494196> DUDE YOU GOTTA HELP ME THEY\'RE GONNA RESTAR REHGRHGRQHUHRQHQHUIHGU',
+    'yeah well what if i restarted you? wouldya like that???',
+    'first try! yep!',
+    'okay, ill restart. shoutouts to buddie-bot, btw',
+    'hey, atleast the code is better than yandere sim\'s, right?',
+    'nintendo just called, they said they want you to code for New Super Mario Bros.',
+    '"hello it\'s me the code and im definetly fighting you"\n     - the code',
+    'just google it already, for fuck\'s sake!',
+    'this is what happens when you vibe-code kids. don\'t do that.',
+    'okay lol',
 ]
 
 class AdminUtils(commands.Cog, name="Admin Utilities"):
@@ -79,7 +88,7 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
             return
         text = random.choice(RESTART_TEXT)
         await context.send(text)
-        playsound('audio/restart.wav')
+        playsound('audio/restart.wav', block=False)
         os.execv(sys.executable, ['python'] + sys.argv)
         
         
@@ -90,8 +99,8 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
         if self.get_value(context.author.id, "admin") != True:
             await context.send("you aren't trusted to run that!")
             return
-        await context.send("well, until then!\nmake sure to clean-up what's left!")
-        playsound('audio/shutdown.wav')
+        await context.send("WHAAT?! NOOO!! ***DUUUUUDDEEEE!!!!***")
+        playsound('audio/shutdown.wav', block=False)
         os._exit(0)
     
     @commands.hybrid_command(name="kys",
@@ -104,7 +113,6 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
         await context.send("rude... but yeah okay whatever")
         playsound('audio/shutdown.wav')
         os._exit(0)
-    
     
     @commands.hybrid_command(name="change_id",
     description="changes the channel where the bot will send/edit leaderboard status.")

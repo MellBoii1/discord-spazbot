@@ -71,19 +71,6 @@ STATUS_FILE = "status_message.json"
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-COOLDOWN_MSG = [
-    'woah, slow down there cowboy!',
-    'aye, stop doing that.',
-    'rate-limiting isn\'t cool, you know.',
-    'spam is no party!',
-    'going somewhere?',
-    'cooldowns? just like forsaken?',
-    'im going to boil you if you dont stop',
-    '"What the fuck is a chill pill?"',
-    'yeah that aint gonna work bucko.',
-    'nope, cant do that.',
-]
-
 """
 Uncomment this if you want to use prefix (normal) commands.
 It is recommended to use slash commands and therefore not use prefix commands.
@@ -245,7 +232,7 @@ class SpazBot(commands.Bot):
         """
         statuses = [
             'killing meliso', 
-            'wasting resources', # can we normalize not killing pcs every picosecond please
+            'wasting resources',
             'being goofy',
             'looking towards nothing',
             'doin a bombjump',
@@ -253,16 +240,16 @@ class SpazBot(commands.Bot):
             'killing other spazzes',
             'Teleporting bread...',
             'gaining conscience...',
-            'TypeError: status is not defined', # type shi
+            'TypeError: status is not defined',
             'Beep boo bo bap bu bu bap.',
             'Hey look, I\'m alive!',
             'looking at your profile',
             'spaz botting',
             'scanning your face (for chat)',
             # ------ Playing (game) ----------
-            'Playing Gummy\'s Overhaul',
+            'Playing BombSquad: Gardenful Modpack',
             'Playing BombSquad',
-            'Playing Joyride Modpack',
+            'Playing BombSquad: Joyride Modpack',
             'Playing BombSquda',
             # ------ Playing (game) ----------
             'try running \'spazbot, grind\'!',
@@ -345,8 +332,8 @@ async def on_command_error(ctx, error):
         await ctx.reply(
             (
                 f"{error}! try sending 'spazbot, help' for all commands\nREMINDER: my "
-                "prefix is either \"sb!command\", or \"spazbot, command\".\nyou can "
-                "also mention me then use a command instead"
+                'prefix is either "sb!command", "spazbot, command", '
+                '@SpazBot command", or just plain slash commands.'
             )
         )
         
@@ -370,19 +357,19 @@ async def on_command_error(ctx, error):
         ctx.command.reset_cooldown(ctx)
         
     elif isinstance(error, commands.CommandOnCooldown):
-        await ctx.reply(
-            (
-                f"{random.choice(COOLDOWN_MSG)}\ntry again after "
-                f"{truncate_float(error.retry_after, 1)} seconds."
-            )
-        )
+        await ctx.reply(f'command is on cooldown, try again after {truncate_float(error.retry_after, 1)}s <a:thumbsdown:1462932503001039014>')
+        
     elif isinstance(error, asyncio.TimeoutError):
         await ctx.reply('you took too long, and the command timed out. try again.')
+        
     elif isinstance(error, aiohttp.ClientConnectorError):
         await ctx.reply('connection failed! the requested server is either down or non functioning.')
+        
     else:
         await ctx.reply(f'i got a unhandled error: {error}\nif you can, report it')
         ctx.command.reset_cooldown(ctx)
+        raise error # raise so we know what it is
+        
     playsound('audio/error.wav', block=False)
     
 # ------------------------ bot events ------------------------------------------    

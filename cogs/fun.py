@@ -21,9 +21,18 @@ TICKETS_EMOJI = "<:spaztix:1470673170427285608>"
 TOKENS_EMOJI = "<:spaztokens:1470673171618336809>"
 FUN_FACTS = [
     "spaz tickets and tokens are both heavily based on Gummy's Overhaul's gumcoins and gumdollars, and the usual tickets and tokens",
-    "(bombsquda) hitting a player on the head with a bomb INSTANTLY kills them, along with giving you some tickets",
+    "(bombsquda) hitting a player on the head with a bomb INSTANTLY kills them,\nalong with giving you some tickets",
     "the tickets are purple because im purple :troll:",
     "i'm eating ram right now!",
+    "buddie-bot is my twinny twin twin ong",
+    (
+        "spazbot, the leaderboard, and bombsquda itself is "
+        "completely open source!\nyou can check them out using the links below."
+        "\nhttps://github.com/MellBoii1/bombsquda-server"
+        "\nhttps://github.com/MellBoii1/discord-spazbot"
+        "\nhttps://github.com/MellBoii1/bombsquda"
+    ),
+    
 ]
 RANDOM_GETTICKETS = [
     "you robbed a random bank and got {tickets} {e}tickets.",
@@ -32,11 +41,11 @@ RANDOM_GETTICKETS = [
     "you hacked spazbot and gave yourself {tickets} {e}tickets.",
     "you actually worked hard (instead of robbing people) and earned {tickets} {e}tickets!",
     "i gave you {tickets} {e}tickets because you seem cool.",
-    "you opened a chest which had {tickets} {e}tickets.", # bombsquad reference hehe
+    "you opened a chest which had {tickets} {e}tickets.",
     "you begged on the streets for tickets and someone gave you {tickets} {e}tickets.",
-    "you commited tax fraud and got away with {tickets} {e}tickets.", # would tax fraud even get you money?
+    "you commited tax fraud and got away with {tickets} {e}tickets.",
     "you took a bunch of tickets from the theater and painted them green ({tickets} {e}tickets)",
-    "you won a tournament for {tickets} {e}tickets! (gee, i wonder what game it was!)",
+    "you won a tournament for {tickets} {e}tickets! (gee, i wonder what game it was)",
     "you traded some money for {tickets} {e}tickets! (probably not a good investment)",
 ]
 OUTCOMES = [
@@ -78,7 +87,7 @@ OUTCOMES = [
     },
     {
         "check": lambda v: True,
-        "msg": "hell yeah, you won {v} {currency}!!!",
+        "msg": "hell yeah, you won {v} {currency}!!! <:newbie_OK:1461416821860208741>",
         "sound": "audio/gamble_good.wav",
         "kinds": {"special"},
     },
@@ -101,7 +110,8 @@ CURRENCIES = {
         "min_cost": 0,
         "chance": 0.13,
         "range": (0, 20),
-        "jackpot": False,
+        "jackpot_bonus": (3, 10),
+        "jackpot": True,
         "kind": "special",
     },
 }
@@ -157,14 +167,14 @@ SHOP_ITEMS = {
         "price": 4000,
         "currency": "tickets",
         "description": "Unlock the title 'ULTRAGAMBLER' for your profile.",
-        "extradesc": "This will multiply the amount of money you get from gambling by 2, and jackpot chance by 15%",
+        "extradesc": "This will multiply the amount of money you get **(and lose)** from gambling by 2, and jackpot chance by 15%",
         "effect": lambda self, user_id, amount: self.set_value(user_id, "title", "ULTRAGAMBLER")
     },
     "title: Addicted to Gambling": {
         "price": 8000,
         "currency": "tickets",
         "description": "Unlock the title 'Addicted to Gambling'",
-        "extradesc": "This will multiply the amount of money you get from gambling by 3, and jackpot chance by 20%",
+        "extradesc": "This will multiply the amount of money you get **(and lose)** from gambling by 3, and jackpot chance by 20%",
         "effect": lambda self, user_id, amount: self.set_value(user_id, "title", "Addicted to Gambling")
     },
     "title: Total SpazBot Enthusiast": {
@@ -290,12 +300,13 @@ class CurrencyShareView(discord.ui.View):
 
 
 class LeaderboardView(discord.ui.View):
-    def __init__(self, *, stat, sorted_users, bot, total_pages, current_page=0):
-        super().__init__(timeout=300)  # 5 minutes timeout
+    def __init__(self, *, stat, sorted_users, bot, guild, total_pages, current_page=0):
+        super().__init__(timeout=300)
 
         self.stat = stat
         self.sorted_users = sorted_users
         self.bot = bot
+        self.guild = guild
         self.total_pages = total_pages
         self.current_page = current_page
 
@@ -313,15 +324,22 @@ class LeaderboardView(discord.ui.View):
 
         lines = []
         for i, (user_id, info) in enumerate(page_users, start=start + 1):
-            user = self.bot.get_user(int(user_id))
-            name = user.display_name if user else f"User {user_id}"
+
+            member = self.guild.get_member(int(user_id)) if self.guild else None
+            user = member or self.bot.get_user(int(user_id))
+
+            name = user.display_name if member else (
+                user.name if user else f"User {user_id}"
+            )
+
             lines.append(f"**{i}. {name}** — {info[self.stat]}")
 
         embed = discord.Embed(
             title=f"🏆 {self.stat.capitalize()} Leaderboard (Page {self.current_page + 1}/{self.total_pages})",
-            description="\n".join(lines) if lines else "no entries on this page.",
+            description="\n".join(lines) if lines else "No entries on this page.",
             color=discord.Color.gold()
         )
+
         return embed
 
     @discord.ui.button(style=discord.ButtonStyle.blurple, emoji="<a:arrow_left:1463262102545236170>")
@@ -675,19 +693,21 @@ class Fun(commands.Cog, name="Fun"):
         jackpot = False
         # More stats based on current title
         extraval = 0
-        if self.get_value(ctx.author.id, 'title') == 'ULTRAGAMBLER':
+        title = self.get_value(ctx.author.id, 'title')
+        if title == 'ULTRAGAMBLER':
             extraval = 0.15
-            value *= 2
-        if self.get_value(ctx.author.id, 'title') == 'Addicted to Gambling':
+        if title == 'Addicted to Gambling':
             extraval = 0.20
-            value *= 3
         if cdata.get("jackpot", False):
             jackpot = random.random() < JACKPOT["chance"] + extraval
             if jackpot:
                 bonus = random.randint(*cdata["jackpot_bonus"])
                 value += bonus
                 playsound(JACKPOT["sound"], block=False)
-
+        if title == 'ULTRAGAMBLER':
+            value *= 2
+        if title == 'Addicted to Gambling':
+            value *= 3
         for outcome in OUTCOMES:
             if kind not in outcome["kinds"]:
                 continue
@@ -761,16 +781,40 @@ class Fun(commands.Cog, name="Fun"):
         # join all dem items into a nice list
         text = "\n".join(f"**{k}**: {v}" for k, v in visible_stats.items())
         await ctx.reply(f"{your} stats:\n{text}")
-    
+        
+    def get_cur_names():
+        item_list = []
+
+        for name in CURRENCIES:  # only keys now
+            choice = app_commands.Choice(name=name, value=name)
+            item_list.append(choice)
+        return item_list
+        
     @commands.hybrid_command(
         name="leaderboard",
         description="see whoever has the most of a stat!",
         aliases=["lb"]
     )
-    async def leaderboard(self, ctx, stat: str = "tickets"):
-        # Load JSON
+    @app_commands.choices(
+        stat=get_cur_names(),
+    )
+    @app_commands.describe(stat='Filter a specific currency/stat', server_only='Filter only this server?')
+    async def leaderboard(self, ctx, stat: str = "tickets", server_only: bool = False):
         with open(DATA_FILE, "r") as f:
             data = json.load(f)
+
+        if server_only:
+            if not ctx.guild:
+                await ctx.send("This filter only works inside servers.")
+                return
+
+            guild_member_ids = {str(member.id) for member in ctx.guild.members}
+
+            data = {
+                uid: info
+                for uid, info in data.items()
+                if uid in guild_member_ids
+            }
 
         # Filter users that actually have the stat
         filtered = {
@@ -778,23 +822,23 @@ class Fun(commands.Cog, name="Fun"):
             if stat in info
         }
 
-        if not filtered: # no one has said stat
-            await ctx.send(f"no one has the stat `{stat}`!")
+        if not filtered:
+            await ctx.send(f"No one has the stat `{stat}`!")
             return
 
-        # Sort by stat (highest first)
         sorted_users = sorted(
             filtered.items(),
             key=lambda x: x[1][stat],
             reverse=True
         )
 
-        total_pages = (len(sorted_users) + 4) // 5  # Ceiling division
+        total_pages = (len(sorted_users) + 4) // 5
 
         view = LeaderboardView(
             stat=stat,
             sorted_users=sorted_users,
             bot=self.bot,
+            guild=ctx.guild,
             total_pages=total_pages,
             current_page=0
         )
