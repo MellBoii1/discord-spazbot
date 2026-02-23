@@ -9,9 +9,6 @@ import typing
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
-# FIXME: only use playsound for 
-# important actions (startup, restart, etc)
-from playsound3 import playsound 
 
 DATA_FILE = "userdata.json"
 # note; ALWAYS use this variable since
@@ -267,8 +264,6 @@ class CurrencyShareView(discord.ui.View):
         # add (and remove) the values
         self.add_value(self.user.id, self.currency_key, self.amount)
         self.add_value(self.author.id, self.currency_key, -self.amount)
-        # play sound (only for me because bots dont play sound lol)
-        playsound("audio/coins.wav", block=False)
         self.stop()
 
     @discord.ui.button(
@@ -484,7 +479,6 @@ class Fun(commands.Cog, name="Fun"):
         if 'effect' in data and data['effect']:
             data['effect'](self, ctx.author.id, amount)
         await ctx.send(f"You successfully bought {amount} amounts of **{item}**!")
-        playsound("audio/coins.wav", block=False)
 
     # maybe like add some other way to gain currency later?
     @commands.hybrid_command(
@@ -651,12 +645,10 @@ class Fun(commands.Cog, name="Fun"):
             msg = cdata["success"].format(v=value, target=user.mention, TICKETS_EMOJI=TICKETS_EMOJI, TOKENS_EMOJI=TOKENS_EMOJI,)
             self.add_value(ctx.author.id, currency, value)
             self.add_value(user.id, currency, -value)
-            playsound('audio/rob_win.wav', block=False)
         else: # we absolutely failed
             msg = cdata["fail"].format(v=value, target=user.mention, TICKETS_EMOJI=TICKETS_EMOJI, TOKENS_EMOJI=TOKENS_EMOJI,)
             self.add_value(ctx.author.id, currency, -value)
             self.add_value(user.id, currency, value)
-            playsound('audio/rob_fail.wav', block=False)
         # now just reply i guess
         await ctx.reply(msg)
             
@@ -673,7 +665,7 @@ class Fun(commands.Cog, name="Fun"):
         name="gamble",
         description="gamble for some stuff!"
     )
-    @commands.cooldown(1, 1, commands.BucketType.user)
+    @commands.cooldown(1, 3, commands.BucketType.user)
     async def gamble(self, ctx):
         currency, cdata = self.roll_currency()
         display = cdata["display"]
@@ -703,7 +695,6 @@ class Fun(commands.Cog, name="Fun"):
             if jackpot:
                 bonus = random.randint(*cdata["jackpot_bonus"])
                 value += bonus
-                playsound(JACKPOT["sound"], block=False)
         if title == 'ULTRAGAMBLER':
             value *= 2
         if title == 'Addicted to Gambling':
@@ -719,7 +710,6 @@ class Fun(commands.Cog, name="Fun"):
                     TICKETS_EMOJI=TICKETS_EMOJI,
                     TOKENS_EMOJI=TOKENS_EMOJI,
                 )
-                playsound(outcome["sound"], block=False)
                 break
 
         if jackpot: # add prefix if needed

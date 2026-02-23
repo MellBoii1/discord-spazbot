@@ -198,7 +198,7 @@ class SpazBot(commands.Bot):
 
         color = 0x2ecc71 if online else 0xe74c3c
         status = (
-            f"online at {SERVER_URL}!" 
+            f"online at {SERVER_URL} !" 
             if online else 
             "offline. spazbot is either off, the server is, or it's broken. please wait!"
         )
@@ -246,12 +246,10 @@ class SpazBot(commands.Bot):
             'looking at your profile',
             'spaz botting',
             'scanning your face (for chat)',
-            # ------ Playing (game) ----------
             'Playing BombSquad: Gardenful Modpack',
             'Playing BombSquad',
             'Playing BombSquad: Joyride Modpack',
             'Playing BombSquda',
-            # ------ Playing (game) ----------
             'try running \'spazbot, grind\'!',
             'being evil (i guess)',
         ]
@@ -364,13 +362,16 @@ async def on_command_error(ctx, error):
         
     elif isinstance(error, aiohttp.ClientConnectorError):
         await ctx.reply('connection failed! the requested server is either down or non functioning.')
+        playsound('audio/error.wav', block=False)
+        
+    elif isinstance(error, discord.ext.commands.errors.BadArgument):
+        await ctx.reply(f'a bad argument was given.\n`{error}`')
         
     else:
         await ctx.reply(f'i got a unhandled error: {error}\nif you can, report it')
         ctx.command.reset_cooldown(ctx)
+        playsound('audio/error.wav', block=False)
         raise error # raise so we know what it is
-        
-    playsound('audio/error.wav', block=False)
     
 # ------------------------ bot events ------------------------------------------    
 playsound('audio/start.wav', block=False)

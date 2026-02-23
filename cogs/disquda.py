@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import math
 import platform
 import random
 import aiohttp
@@ -12,6 +13,153 @@ from discord.ext import commands
 from discord.ext.commands import Context
 USER_DATA_FILE = "userdata.json"
 
+class LeaderboardView(discord.ui.View):
+    def __init__(self, ctx, data, format_time, pretty_name,
+                 difficulty="all", sort_mode="best"):
+        super().__init__(timeout=120)
+
+        self.ctx = ctx
+        self.data = data
+        self.format_time = format_time
+        self.pretty_name = pretty_name
+
+        self.difficulty = difficulty
+        self.sort_mode = sort_mode
+
+        self.levels = self.filter_levels()
+        self.page = 0
+        self.per_page = 3
+        self.max_page = max(0, math.ceil(len(self.levels) / self.per_page) - 1)
+        self.add_item(DifficultySelect())
+
+    # ----------------------------
+    # Filtering logic
+    # ----------------------------
+
+    def filter_levels(self):
+        if self.difficulty == "all":
+            return list(self.data.items())
+
+        filtered = []
+        for level, entries in self.data.items():
+            if level.startswith("Easy:") and self.difficulty == "easy":
+                filtered.append((level, entries))
+            elif level.startswith("Default:") and self.difficulty == "hard":
+                filtered.append((level, entries))
+
+        return filtered
+
+    # ----------------------------
+    # Embed builder
+    # ----------------------------
+
+    def build_embed(self):
+        embed = discord.Embed(
+            title="BombSquda Co-op Best Times",
+            color=0x41ab4d
+        )
+
+        start = self.page * self.per_page
+        end = start + self.per_page
+        page_levels = self.levels[start:end]
+
+        for level, entries in page_levels:
+            if not entries:
+                continue
+
+            reverse = self.sort_mode == "worst"
+            sorted_entries = sorted(
+                entries.items(),
+                key=lambda x: x[1],
+                reverse=reverse
+            )
+
+            lines = []
+            for i, (player, time) in enumerate(sorted_entries[:5], start=1):
+                lines.append(
+                    f"**{i}. {player}** — `{self.format_time(time)}`"
+                )
+
+            embed.add_field(
+                name=self.pretty_name(level),
+                value="\n".join(lines),
+                inline=False
+            )
+
+        embed.set_footer(
+            text=f"Page {self.page+1}/{self.max_page+1} | "
+                 f"Filter: {self.difficulty.title()} | "
+                 f"Sort: {self.sort_mode.title()}"
+        )
+
+        return embed
+        
+    @discord.ui.button(emoji="<a:darrow_left_big:1474535619798499352>", style=discord.ButtonStyle.gray)
+    async def first_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = 0
+        await interaction.response.edit_message(
+            embed=self.build_embed(), view=self
+        )
+
+    @discord.ui.button(emoji="<a:arrow_left:1463262102545236170>", style=discord.ButtonStyle.gray)
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page > 0:
+            self.page -= 1
+        await interaction.response.edit_message(
+            embed=self.build_embed(), view=self
+        )
+
+    @discord.ui.button(emoji="<a:arrow_right:1463262135806328965>", style=discord.ButtonStyle.gray)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page < self.max_page:
+            self.page += 1
+        await interaction.response.edit_message(
+            embed=self.build_embed(), view=self
+        )
+
+    @discord.ui.button(emoji="<a:darrow_right_big:1474535621216305302>", style=discord.ButtonStyle.gray)
+    async def last_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.page = self.max_page
+        await interaction.response.edit_message(
+            embed=self.build_embed(), view=self
+        )
+        
+    @discord.ui.button(label="Toggle Sort", style=discord.ButtonStyle.green)
+    async def toggle_sort(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.sort_mode = "worst" if self.sort_mode == "best" else "best"
+
+        await interaction.response.edit_message(
+            embed=self.build_embed(),
+            view=self
+        )
+        
+class DifficultySelect(discord.ui.Select):
+    def __init__(self):
+        options = [
+            discord.SelectOption(label="All", value="all"),
+            discord.SelectOption(label="Easy", value="easy"),
+            discord.SelectOption(label="Hard", value="hard"),
+        ]
+
+        super().__init__(
+            placeholder="Filter Difficulty",
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        view: LeaderboardView = self.view
+        view.difficulty = self.values[0]
+        view.levels = view.filter_levels()
+        view.page = 0
+        view.max_page = max(
+            0, math.ceil(len(view.levels) / view.per_page) - 1
+        )
+
+        await interaction.response.edit_message(
+            embed=view.build_embed(),
+            view=view
+        )
+        
 class Disquda(commands.Cog, name="CrossSquda"):
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -104,29 +252,17 @@ class Disquda(commands.Cog, name="CrossSquda"):
         if not data:
             await context.send("No scores yet!")
             return
-
-        embed = discord.Embed(
-            title="Leaderboard",
-            color=0x41ab4d
+        view = LeaderboardView(
+            context,
+            data,
+            self.format_time,
+            self.pretty_level_name
         )
 
-        for level, entries in data.items():
-            if not entries:
-                continue
-
-            sorted_entries = sorted(entries.items(), key=lambda x: x[1])
-
-            lines = []
-            for i, (player, time) in enumerate(sorted_entries[:5], start=1):
-                lines.append(f"**{i}. {player}** — `{self.format_time(time)}`")
-
-            embed.add_field(
-                name=self.pretty_level_name(level),
-                value="\n".join(lines),
-                inline=False
-            )
-
-        await context.send(embed=embed)       
+        await context.send(
+            embed=view.build_embed(),
+            view=view
+        )   
     
     @commands.hybrid_command(
         name="link_bombsquda",

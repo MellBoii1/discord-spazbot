@@ -16,9 +16,13 @@ import requests
 import sys
 import os
 import pyttsx3
+from mss import mss
+from pathlib import Path
+import mss
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
+from playsound3 import playsound
 
 GREETINGS = [
     "greetings!",
@@ -180,10 +184,44 @@ class General(commands.Cog, name="General"):
     # ...maybe
     @commands.hybrid_command(
         name="ai",
-        description='?'
+        description='Use the ultimate generative AI to generate the BEST answers for your questions!'
     )
-    async def ai(self, context: Context):
-        await context.send('Nothing here yet...')
+    async def ai(self, context: Context, question: str):
+        answers = [
+            'i dunno.',
+            'yeah like maybe',
+            'totally!',
+            'nope.',
+            'hell no!',
+            'can\'t answer that.',
+            'ask something else....',
+            'maybe you\'ll find out.',
+            'hmmmm... maybe not.',
+            'maybe, yeah...',
+        ]
+        await context.send(f'-# {context.author.display_name} asked: `{question}`\n{random.choice(answers)}')
+    
+    # Thanks to buddiew for this peak code 
+    # :sunglasses_moment:
+    @commands.hybrid_command(
+        name="screenshot", 
+        description="take a screenshot of mell's screen (so you know what he's doin)")
+    @commands.cooldown(1, 5, commands.BucketType.user) 
+    async def scren(self, ctx: Context):
+        # python allows for defs inside defs, so just put it here
+        def on_exists(fname: str) -> None:
+            """Callback example when we try to overwrite an existing screenshot."""
+            file = Path(fname)
+            if file.is_file():
+                file.unlink()
+        # run it ONCE the command is called
+        with mss.mss() as sct:
+            filename = sct.shot(output="LatestScreenshot.png", callback=on_exists)
+            print("Took a screenshot at:")
+            print(f'{ctx.channel.name}, at server {ctx.guild.name}')
+            playsound('audio/notif.wav', block=False)
+        await ctx.defer()
+        await ctx.reply(file=discord.File(f'{filename}'))
 
 async def setup(bot) -> None:
     await bot.add_cog(General(bot))

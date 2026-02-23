@@ -88,7 +88,6 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
             return
         text = random.choice(RESTART_TEXT)
         await context.send(text)
-        playsound('audio/restart.wav', block=False)
         os.execv(sys.executable, ['python'] + sys.argv)
         
         
@@ -100,7 +99,6 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
             await context.send("you aren't trusted to run that!")
             return
         await context.send("WHAAT?! NOOO!! ***DUUUUUDDEEEE!!!!***")
-        playsound('audio/shutdown.wav', block=False)
         os._exit(0)
     
     @commands.hybrid_command(name="kys",
@@ -111,7 +109,6 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
             await context.send("how about i don't do that >:/")
             return
         await context.send("rude... but yeah okay whatever")
-        playsound('audio/shutdown.wav')
         os._exit(0)
     
     @commands.hybrid_command(name="change_id",
