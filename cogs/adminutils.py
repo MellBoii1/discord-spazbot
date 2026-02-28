@@ -99,7 +99,7 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
             await context.send("you aren't trusted to run that!")
             return
         await context.send("WHAAT?! NOOO!! ***DUUUUUDDEEEE!!!!***")
-        os._exit(0)
+        await self.bot.close()
     
     @commands.hybrid_command(name="kys",
     description="makes the bot kill itself... its the same thing as shutdown tho")
@@ -189,6 +189,7 @@ class AdminUtils(commands.Cog, name="Admin Utilities"):
             await ctx.send("you aren't trusted to run that!")
             return
         synced = await ctx.bot.tree.sync()
+        print(synced)
         await ctx.send(f"Synced {len(synced)} commands globally.")
 
     @commands.hybrid_command(
