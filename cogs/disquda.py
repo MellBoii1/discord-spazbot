@@ -8,10 +8,12 @@ import aiohttp
 import discord
 import typing
 import requests
+import urllib
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
 USER_DATA_FILE = "userdata.json"
+URL = "https://bombsquda.tailc76b25.ts.net"
 
 class LeaderboardView(discord.ui.View):
     def __init__(self, ctx, data, format_time, pretty_name,
@@ -174,10 +176,27 @@ class Disquda(commands.Cog, name="CrossSquda"):
     def save_user_data(self, data):
         with open(USER_DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+    
+    def get_value(self, user_id: int, label: str, default=0):
+        data = self.load_user_data()
+        return data.get(str(user_id), {}).get(label, default)
 
     def get_user(self, uid):
         data = self.load_user_data()
         return data.setdefault(str(uid), {})
+    
+    def set_value(self, user_id: int, label: str, value):
+        data = self.load_user_data()
+        uid = str(user_id)
+        if uid not in data:
+            data[uid] = {}
+        data[uid][label] = value
+        self.save_user_data(data)
+
+    def add_value(self, user_id: int, label: str, amount: int = 1):
+        current = self.get_value(user_id, label, 0)
+        self.set_value(user_id, label, current + amount)
+        return current + amount
 
     def set_user_value(self, uid, key, value):
         data = self.load_user_data()
@@ -217,12 +236,10 @@ class Disquda(commands.Cog, name="CrossSquda"):
     )
     @commands.cooldown(1, 15, commands.BucketType.user)
     async def leaderboard(self, context: Context):
-        url = "https://bombsquda.tailc76b25.ts.net/get/all"
-
         try:
             timeout = aiohttp.ClientTimeout(total=5)  # don't hang forever
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.get(url) as resp:
+                async with session.get(f'{URL}/get/all') as resp:
                     if resp.status != 200:
                         await context.send("failed to fetch leaderboard")
                         return
@@ -274,27 +291,148 @@ class Disquda(commands.Cog, name="CrossSquda"):
     async def link_bombsquda(self, ctx, bs_id: str):
         # basic sanity check
         if ctx.guild is not None:
-            await ctx.send("please run this command in DMs!")
+            await ctx.reply("Dumbass")
             return
         if ":" not in bs_id or len(bs_id) < 20:
-            await ctx.send("that doesn't look like a ID.")
+            await ctx.reply("that doesn't look like a ID.")
             return
 
         self.set_user_value(ctx.author.id, "squda_id", bs_id)
-        await ctx.send(
+        await ctx.reply(
             (
                 "the id was successfully linked!\nPS. don't share it to anyone, "
                 "or they could control certain things!"
             )
         )
+    @commands.hybrid_command(
+        name="get_bank",
+        description="Gets how much of a currency you have in the server's bank.",
+    )
+    async def test_getcur(self, ctx, currency: str):
+        id = self.get_value(ctx.author.id, "squda_id", '')
+        if not id:
+            await ctx.reply('hey get a squda id first please!')
+            return
+        data = {
+            "bs_id": id,
+            "type": currency,
+        }
+        request = urllib.request.Request(
+            f"{URL}/getcur",
+            data=json.dumps(data).encode('utf-8'),
+            headers={
+                "Content-Type": "application/json"
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=2) as response:
+                read = response.read()
+                thefuckingjson = json.loads(read.decode('utf-8'))
+                await ctx.reply(f'you have {thefuckingjson.get('amount')} {currency} in the bank')
+        except urllib.error.URLError as e:
+            await ctx.reply('couldn\'t connect to the server, try again later')
     
+    @commands.hybrid_command(
+        name="deposit_bank",
+        description="Send a amount to your account in the server's bank.",
+    )
+    async def deposit_bank(self, ctx, amount: int, currency: str):
+        id = self.get_value(ctx.author.id, "squda_id", '')
+        player_amount = self.get_value(ctx.author.id, currency, 0)
+        if not id:
+            await ctx.reply('hey get a squda id first please!')
+            return
+        if amount > player_amount:
+            await ctx.reply(f'you don\'t have enough {currency} to deposit.')
+            return
+        if amount <= 0:
+            await ctx.reply('enter a correct value!')
+            return
+        data = {
+            "bs_id": id,
+            "amount": amount,
+            "type": currency,
+        }
+        request = urllib.request.Request(
+            f"{URL}/sendcur",
+            data=json.dumps(data).encode('utf-8'),
+            headers={
+                "Content-Type": "application/json"
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=2) as response:
+                read = response.read()
+                thefuckingjson = json.loads(read.decode('utf-8'))
+                new = thefuckingjson.get('new_bal')
+                self.add_value(ctx.author.id, currency, -amount)
+                await ctx.reply(f'done! you deposited {amount} {currency}.\nyour bank now has: {new} {currency}.')
+        except urllib.error.URLError as e:
+            await ctx.reply('unable to connect! server is probably down.')
+    
+    @commands.hybrid_command(
+        name="withdraw_bank",
+        description="Withdraw a amount from your bank in the server to your account.",
+    )
+    async def withdraw_bank(self, ctx, amount: int, currency: str):
+        id = self.get_value(ctx.author.id, "squda_id", '')
+        data = {
+            "bs_id": id,
+            "type": currency,
+        }
+        request = urllib.request.Request(
+            f"{URL}/getcur",
+            data=json.dumps(data).encode('utf-8'),
+            headers={
+                "Content-Type": "application/json"
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=2) as response:
+                read = response.read()
+                thefuckingjson = json.loads(read.decode('utf-8'))
+                player_amount = thefuckingjson.get('amount')
+        except urllib.error.URLError as e:
+            await ctx.reply('unable to connect! server is probably down.')
+            return
+        if not id:
+            await ctx.reply('hey get a squda id first please!')
+            return
+        if amount > player_amount:
+            await ctx.reply(f'you don\'t have enough {currency} to withdraw.')
+            return
+        if amount <= 0:
+            await ctx.reply('enter a correct value!')
+            return
+        data = {
+            "bs_id": id,
+            "amount": amount,
+            "type": currency,
+        }
+        request = urllib.request.Request(
+            f"{URL}/withdrawcur",
+            data=json.dumps(data).encode('utf-8'),
+            headers={
+                "Content-Type": "application/json"
+            },
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=2) as response:
+                read = response.read()
+                thefuckingjson = json.loads(read.decode('utf-8'))
+                new = thefuckingjson.get('new_bal')
+                self.add_value(ctx.author.id, currency, amount)
+                await ctx.reply(f'done! you withdrew {amount} {currency}.\nyour bank now has: {new} {currency}.')
+        except urllib.error.URLError as e:
+            await ctx.reply('unable to connect! server is probably down.')
+            
     @commands.hybrid_command(
         name="unlink_bombsquda",
         description="removes the ID that you linked to your discord account."
     )
     async def unlink_bombsquda(self, ctx):
         self.set_user_value(ctx.author.id, "squda_id", None)
-        await ctx.send("done! the previous ID was removed.")
+        await ctx.reply("done! the previous ID was removed.")
 
 async def setup(bot) -> None:
     await bot.add_cog(Disquda(bot))
