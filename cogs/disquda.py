@@ -425,6 +425,24 @@ class Disquda(commands.Cog, name="CrossSquda"):
                 await ctx.reply(f'done! you withdrew {amount} {currency}.\nyour bank now has: {new} {currency}.')
         except urllib.error.URLError as e:
             await ctx.reply('unable to connect! server is probably down.')
+    
+    @commands.hybrid_command(
+        name="ping_server",
+        description="Pings the BombSquda server. You'd never have guessed."
+    )
+    async def ping_server(self, ctx):
+        online = False
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(URL, timeout=2):
+                    online = True
+        except Exception as e:
+            online = False
+        if online:
+            await ctx.reply('yeah server seems to be okay')
+        else:
+            await ctx.reply('server is in fact, not online')
+        
             
     @commands.hybrid_command(
         name="unlink_bombsquda",
