@@ -12,7 +12,9 @@ from discord.ext.commands import Context
 from playsound3 import playsound
 from dotenv import find_dotenv, set_key
 OWNER_ID = 1078788946609324175
-DATA_FILE = "userdata.json"
+path = f'{__file__}\\userdata.json'.replace('\\', '/') 
+path = path.replace('cogs/adminutils.py/', '') 
+DATA_FILE = path
 DEFAULT_USER_DATA = {
     "tickets": 350,
     "tokens": 25,

@@ -362,7 +362,10 @@ async def on_command_error(ctx, error):
         
     elif isinstance(error, aiohttp.ClientConnectorError):
         await ctx.reply('connection failed! the requested server is either down or non functioning.')
-        playsound('audio/error.wav', block=False)
+        
+        path = f'{__file__}\\audio\\start.wav'.replace('\\', '/') 
+        path = path.replace('bot.py/', '') 
+        playsound(path, block=False)
         
     elif isinstance(error, discord.ext.commands.errors.BadArgument):
         await ctx.reply(f'a bad argument was given.\n`{error}`')
@@ -370,10 +373,15 @@ async def on_command_error(ctx, error):
     else:
         await ctx.reply(f'i got a unhandled error: {error}\nif you can, report it')
         ctx.command.reset_cooldown(ctx)
-        playsound('audio/error.wav', block=False)
+        
+        path = f'{__file__}\\audio\\start.wav'.replace('\\', '/') 
+        path = path.replace('bot.py/', '') 
+        playsound(path, block=False)
         raise error # raise so we know what it is
     
-# ------------------------ bot events ------------------------------------------    
-playsound('audio/start.wav', block=False)
+# ------------------------ bot events ------------------------------------------  
+path = f'{__file__}\\audio\\start.wav'.replace('\\', '/') 
+path = path.replace('bot.py/', '') 
+playsound(path, block=False)
 bot.run(os.getenv("TOKEN"))
 

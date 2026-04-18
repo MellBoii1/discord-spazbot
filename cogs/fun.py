@@ -6,11 +6,14 @@ import time
 import aiohttp
 import discord
 import typing
+import asyncio
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
 
-DATA_FILE = "userdata.json"
+path = f'{__file__}\\userdata.json'.replace('\\', '/') 
+path = path.replace('cogs/fun.py/', '') 
+DATA_FILE = path
 # note; ALWAYS use this variable since
 # everytime a emoji gets updated on 
 # discord, it's markdown changes
@@ -357,6 +360,7 @@ class LeaderboardView(discord.ui.View):
 class Fun(commands.Cog, name="Fun"):
     def __init__(self, bot) -> None:
         self.bot = bot
+        self.allow_shots = True
         
     # --------------------------- DATA LOADER --------------------------   
     def load_data(self):
@@ -635,7 +639,7 @@ class Fun(commands.Cog, name="Fun"):
             ctx.command.reset_cooldown(ctx)
             return
         value = random.randint(*cdata["range"])
-        chance = 0.45 # more in favor of failing
+        chance = 0.65 # more in favor of WINNNINNN
         expirations = self.get_value(ctx.author.id, "rob_multi_expirations", [])
         current_time = time.time()
         active = [exp for exp in expirations if exp > current_time]
@@ -717,6 +721,35 @@ class Fun(commands.Cog, name="Fun"):
 
         self.add_value(ctx.author.id, currency, value)
         await ctx.reply(msg)
+
+    @commands.hybrid_command(
+        name="russian_roulette",
+        description="Take a chance at killing Mell's PC.",
+        aliases=['rr'],
+    )
+    @commands.cooldown(1, 1000, commands.BucketType.user)
+    async def rr(self, ctx):
+        if not self.allow_shots:
+            await ctx.reply("hey hang on, someone's already shootin him! calm down will ya??")
+            return
+        self.allow_shots = False
+        it_did_work = random.random() < 0.1
+        me = await self.bot.fetch_user(1078788946609324175)
+        myname = me.display_name
+        await ctx.reply("You load 1 live bullet into your gun, and 9 other blanks. 10% chance it goes off, otherwise not.")
+        await asyncio.sleep(3)
+        await ctx.send(f"You willingly point it towards {myname}, staring intensely at eachother...")
+        await asyncio.sleep(3)
+        await ctx.send("Then, you slowly pull the trigger...")
+        await asyncio.sleep(5)
+        self.allow_shots = True
+        if it_did_work:
+            await ctx.send(f"POW! The gun goes off. {myname} is basically as good as dead.\n...including me, since I was running there. <:newbie_bruh:1461416819809063014>")
+            import subprocess
+            subprocess.run(["powershell", "wininit"])
+        else:
+            await ctx.send("...it's blank. Guess I get to live another day!")
+        
 
     # FIXME: this command is a joke
     # if we release spazbot publically, we should 

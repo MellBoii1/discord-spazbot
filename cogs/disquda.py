@@ -12,7 +12,9 @@ import urllib
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
-USER_DATA_FILE = "userdata.json"
+path = f'{__file__}\\userdata.json'.replace('\\', '/') 
+path = path.replace('cogs/disquda.py/', '') 
+USER_DATA_FILE = path
 URL = "https://bombsquda.tailc76b25.ts.net"
 
 class LeaderboardView(discord.ui.View):

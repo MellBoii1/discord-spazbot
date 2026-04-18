@@ -31,7 +31,9 @@ GREETINGS = [
     "name's spazbot!",
     "i'm up and runnin'!",
 ]
-USER_DATA_FILE = 'userdata.json'
+path = f'{__file__}\\userdata.json'.replace('\\', '/') 
+path = path.replace('cogs/general.py/', '') 
+USER_DATA_FILE = path
 
 class HelpView(discord.ui.View):
     def __init__(self, *, bot: commands.Bot, author: discord.Member, pages: list[discord.Embed]):
