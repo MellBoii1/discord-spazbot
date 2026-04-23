@@ -195,6 +195,10 @@ SHOP_ITEMS = {
 
 DOWNLOADS = Path.home() / "Downloads"
 IMAGES = Path.home() / "Pictures"
+SQUDAPNG = Path.home() / "Downloads/bombsqudapng"
+RESPACK = Path.home() / "Downloads/mell's resource pack"
+SQUDAPNGEX = Path.home() / "Downloads/bombsqudapng/the other folder"
+BOREDFOLDER = Path.home() / "Downloads/the im bored folder"
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
 
@@ -229,28 +233,31 @@ def find_images_recursive(folder):
 
 def pick_random_image():
     items = list(DOWNLOADS.iterdir())
-    items.append(list(IMAGES.iterdir()))
+    # REMOVE THESE BELOW IF THEY DONT WORK
+    # (custom folders for me)
+    items.extend(list(IMAGES.iterdir()))
+    items.extend(list(SQUDAPNG.iterdir()))
+    items.extend(list(SQUDAPNGEX.iterdir()))
+    items.extend(list(BOREDFOLDER.iterdir()))
+    items.extend(list(RESPACK.iterdir()))
     random.shuffle(items)
 
     for item in items:
+        # found a folder
+        if item.is_dir():
 
-        # Direct image in Downloads
-        if is_image(item):
-            return item
-
-        # Folder found
-        elif item.is_dir():
-
-            # Search everything inside
+            # search all images inside
             images = find_images_recursive(item)
 
-            # If no images anywhere, back out
+            # no images? go on
             if not images:
                 continue
 
-            # Randomly decide whether to use this folder
-            if random.choice([True, False]):
-                return random.choice(images)
+            return random.choice(images)
+
+        # found a image, return it
+        if is_image(item):
+            return item
 
     return None
 
