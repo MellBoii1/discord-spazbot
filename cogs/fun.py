@@ -7,9 +7,11 @@ import aiohttp
 import discord
 import typing
 import asyncio
+import subprocess
 from discord import app_commands
 from discord.ext import commands
 from discord.ext.commands import Context
+from pathlib import Path
 
 path = f'{__file__}\\userdata.json'.replace('\\', '/') 
 path = path.replace('cogs/fun.py/', '') 
@@ -32,7 +34,6 @@ FUN_FACTS = [
         "\nhttps://github.com/MellBoii1/discord-spazbot"
         "\nhttps://github.com/MellBoii1/bombsquda"
     ),
-    
 ]
 RANDOM_GETTICKETS = [
     "you robbed a random bank and got {tickets} {e}tickets.",
@@ -191,6 +192,67 @@ SHOP_ITEMS = {
         "effect": lambda self, user_id, amount: self.add_rob_multi(user_id)
     }
 }
+
+DOWNLOADS = Path.home() / "Downloads"
+IMAGES = Path.home() / "Pictures"
+
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
+
+def is_image(file):
+    try:
+        return file.suffix.lower() in IMAGE_EXTENSIONS
+    except AttributeError:
+        return None
+
+def get_images_in_folder(folder):
+    return [
+        f for f in folder.rglob("*")
+        if f.is_file() and is_image(f)
+    ]
+
+def find_images_recursive(folder):
+    """
+    Search folder and all subfolders for images.
+    Returns a list of image Paths.
+    """
+    found = []
+
+    for item in folder.iterdir():
+        if item.is_file() and is_image(item):
+            found.append(item)
+
+        elif item.is_dir():
+            # Search subfolder
+            found.extend(find_images_recursive(item))
+
+    return found
+
+def pick_random_image():
+    items = list(DOWNLOADS.iterdir())
+    items.append(list(IMAGES.iterdir()))
+    random.shuffle(items)
+
+    for item in items:
+
+        # Direct image in Downloads
+        if is_image(item):
+            return item
+
+        # Folder found
+        elif item.is_dir():
+
+            # Search everything inside
+            images = find_images_recursive(item)
+
+            # If no images anywhere, back out
+            if not images:
+                continue
+
+            # Randomly decide whether to use this folder
+            if random.choice([True, False]):
+                return random.choice(images)
+
+    return None
 
 class CurrencyShareView(discord.ui.View):
     def __init__(self, *, author, amount, user, contexto, currency_key, currency_config, emoji):
@@ -729,27 +791,58 @@ class Fun(commands.Cog, name="Fun"):
     )
     @commands.cooldown(1, 1000, commands.BucketType.user)
     async def rr(self, ctx):
+        import subprocess
+        import ctypes
+        # don't allow if already in process
         if not self.allow_shots:
             await ctx.reply("hey hang on, someone's already shootin him! calm down will ya??")
             return
+        # check for admin
+        try:
+            if not ctypes.windll.shell32.IsUserAnAdmin():
+                await ctx.reply('couldn\'t try this command, since i was launched without admin perms. ask whoever\'s hosting to enable it!')
+                return
+        except AttributeError:
+            await ctx.reply('sorry, but spazbot is being run on a non-windows machine. ask whoever\'s hosting to switch over...')
+            return
+        # disable the command if we wish to
+        if not bool(False):
+            await ctx.reply('sorry, this command is disabled for now...')
+            return
+            
         self.allow_shots = False
         it_did_work = random.random() < 0.1
+        # fetch my user and my name
         me = await self.bot.fetch_user(1078788946609324175)
         myname = me.display_name
+        # ok do a cutscene
         await ctx.reply("You load 1 live bullet into your gun, and 9 other blanks. 10% chance it goes off, otherwise not.")
         await asyncio.sleep(3)
         await ctx.send(f"You willingly point it towards {myname}, staring intensely at eachother...")
         await asyncio.sleep(3)
         await ctx.send("Then, you slowly pull the trigger...")
         await asyncio.sleep(5)
+        # reallow shooting
         self.allow_shots = True
+        # if it did work, BSoD
         if it_did_work:
             await ctx.send(f"POW! The gun goes off. {myname} is basically as good as dead.\n...including me, since I was running there. <:newbie_bruh:1461416819809063014>")
-            import subprocess
             subprocess.run(["powershell", "wininit"])
+        # otherwise, go on
         else:
             await ctx.send("...it's blank. Guess I get to live another day!")
-        
+    
+    @commands.hybrid_command(
+        name="random_image", 
+        description="grabs a random image from mell's downloads and puts it here",
+        aliases=['r_i'],
+    )
+    async def image(self, ctx):
+        image = pick_random_image()
+        if image:
+            await ctx.reply(f'-# found image at {image};', file=discord.File(image))
+        else:
+            await ctx.reply('dint find a image :(')
 
     # FIXME: this command is a joke
     # if we release spazbot publically, we should 
