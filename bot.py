@@ -363,7 +363,7 @@ async def on_command_error(ctx, error):
     elif isinstance(error, aiohttp.ClientConnectorError):
         await ctx.reply('connection failed! the requested server is either down or non functioning.')
         
-        path = f'{__file__}\\audio\\start.wav'.replace('\\', '/') 
+        path = f'{__file__}\\audio\\error.wav'.replace('\\', '/') 
         path = path.replace('bot.py/', '') 
         playsound(path, block=False)
         
@@ -371,10 +371,10 @@ async def on_command_error(ctx, error):
         await ctx.reply(f'a bad argument was given.\n`{error}`')
         
     else:
-        await ctx.reply(f'i got a unhandled error: {error}\nif you can, report it')
+        await ctx.reply(f'unhandled error occured:\n`{error}`\nif you can, report it or make a issue on the github (if it\'s likely a issue)')
         ctx.command.reset_cooldown(ctx)
         
-        path = f'{__file__}\\audio\\start.wav'.replace('\\', '/') 
+        path = f'{__file__}\\audio\\error.wav'.replace('\\', '/') 
         path = path.replace('bot.py/', '') 
         playsound(path, block=False)
         raise error # raise so we know what it is
