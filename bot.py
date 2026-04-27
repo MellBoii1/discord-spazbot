@@ -307,10 +307,6 @@ class SpazBot(commands.Bot):
             )
     
     async def on_message(self, message):
-        if message.author.bot:
-            return
-        # if 'spazbot' in message.content and ',' not in message.content:
-            # await message.channel.send('who the fucki s talking about me :rage:')
         await self.process_commands(message)
         
 bot = SpazBot()
