@@ -200,7 +200,8 @@ RESPACK = Path.home() / "Downloads/mell's resource pack"
 SQUDAPNGEX = Path.home() / "Downloads/bombsqudapng/the other folder"
 BOREDFOLDER = Path.home() / "Downloads/the im bored folder"
 
-IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"}
+IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp"}
+SOUND_EXTENSIONS = {".mp3", ".wav", ".ogg"}
 
 def is_image(file):
     try:
@@ -208,11 +209,11 @@ def is_image(file):
     except AttributeError:
         return None
 
-def get_images_in_folder(folder):
-    return [
-        f for f in folder.rglob("*")
-        if f.is_file() and is_image(f)
-    ]
+def is_sound(file):
+    try:
+        return file.suffix.lower() in SOUND_EXTENSIONS
+    except AttributeError:
+        return None
 
 def find_images_recursive(folder):
     """
@@ -228,6 +229,23 @@ def find_images_recursive(folder):
         elif item.is_dir():
             # Search subfolder
             found.extend(find_images_recursive(item))
+
+    return found
+
+def find_sounds_recursive(folder):
+    """
+    Search folder and all subfolders for images.
+    Returns a list of image Paths.
+    """
+    found = []
+
+    for item in folder.iterdir():
+        if item.is_file() and is_sound(item):
+            found.append(item)
+
+        elif item.is_dir():
+            # Search subfolder
+            found.extend(find_sounds_recursive(item))
 
     return found
 
@@ -257,6 +275,29 @@ def pick_random_image():
 
         # found a image, return it
         if is_image(item):
+            return item
+
+    return None
+
+def pick_random_sound():
+    items = list(DOWNLOADS.iterdir())
+    random.shuffle(items)
+
+    for item in items:
+        # found a folder
+        if item.is_dir():
+
+            # search all images inside
+            sounds = find_sounds_recursive(item)
+
+            # no images? go on
+            if not sounds:
+                continue
+
+            return random.choice(sounds)
+
+        # found a image, return it
+        if is_sound(item):
             return item
 
     return None
@@ -796,7 +837,7 @@ class Fun(commands.Cog, name="Fun"):
         description="Take a chance at killing Mell's PC.",
         aliases=['rr'],
     )
-    @commands.cooldown(1, 1000, commands.BucketType.user)
+    @commands.cooldown(1, 290, commands.BucketType.user)
     async def rr(self, ctx):
         import subprocess
         import ctypes
@@ -818,7 +859,7 @@ class Fun(commands.Cog, name="Fun"):
             return
             
         self.allow_shots = False
-        it_did_work = random.random() < 0.1
+        it_did_work = random.random() < 0.12
         # fetch my user and my name
         me = await self.bot.fetch_user(1078788946609324175)
         myname = me.display_name
@@ -841,15 +882,33 @@ class Fun(commands.Cog, name="Fun"):
     
     @commands.hybrid_command(
         name="random_image", 
-        description="grabs a random image from mell's downloads and puts it here",
+        description="grabs a random image from the hoster's pc",
         aliases=['r_i'],
     )
     async def image(self, ctx):
         image = pick_random_image()
         if image:
-            await ctx.reply(f'-# found image at {image};', file=discord.File(image))
+            try:    
+                await ctx.reply(f'-# found image at {image};', file=discord.File(image))
+            except:
+                await ctx.reply(f'whoops sorry, image was too big for me to upload.\n-# {image}')
         else:
             await ctx.reply('dint find a image :(')
+    
+    @commands.hybrid_command(
+        name="random_sound", 
+        description="grabs a random sound from the hoster's pc",
+        aliases=['r_s'],
+    )
+    async def sound(self, ctx):
+        sound = pick_random_sound()
+        if sound:
+            try:
+                await ctx.reply(f'-# found sound at {sound};', file=discord.File(sound))
+            except:
+                await ctx.reply(f'whoops sorry, sound was too big for me to upload.\n-# {sound}')
+        else:
+            await ctx.reply('dint find a sound :(')
 
     # FIXME: this command is a joke
     # if we release spazbot publically, we should 
