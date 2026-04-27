@@ -85,6 +85,7 @@ class General(commands.Cog, name="General"):
     def __init__(self, bot) -> None:
         self.bot = bot
         self.tts_engine = pyttsx3.init()
+        self.tts_engine.runAndWait()
 
     @commands.hybrid_command(
         name="help",
@@ -161,7 +162,6 @@ class General(commands.Cog, name="General"):
         # FIXME: discord has a feature for tts.
         # use that maybe??
         self.tts_engine.say(message)
-        self.tts_engine.runAndWait()
         
     @commands.hybrid_command(
         name="ping",
@@ -212,7 +212,6 @@ class General(commands.Cog, name="General"):
     async def scren(self, ctx: Context):
         # python allows for defs inside defs, so just put it here
         def on_exists(fname: str) -> None:
-            """Callback example when we try to overwrite an existing screenshot."""
             file = Path(fname)
             if file.is_file():
                 file.unlink()
@@ -221,7 +220,9 @@ class General(commands.Cog, name="General"):
             filename = sct.shot(output="LatestScreenshot.png", callback=on_exists)
             print("Took a screenshot at:")
             print(f'{ctx.channel.name}, at server {ctx.guild.name}')
-            playsound('audio/notif.wav', block=False)
+            dir = Path(__file__).resolve().parent.parent
+            spath = dir / 'audio/notif.wav'
+            playsound(spath, block=False)
         await ctx.defer()
         await ctx.reply(file=discord.File(f'{filename}'))
 
